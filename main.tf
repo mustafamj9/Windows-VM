@@ -1,12 +1,5 @@
-
-# create the resource group
-locals {
-  safe_server_type = regexreplace(lower(var.server_type), "[^a-z0-9_\\-()\\.]", "-")
-  safe_env         = regexreplace(lower(var.env), "[^a-z0-9_\\-()\\.]", "-")
-}
-
 resource "azurerm_resource_group" "RG" {
-  name     = "${local.safe_server_type}-${local.safe_env}-resource-group"
+  name     = "web-RG-${count.index + 1}"
   location = var.location
 }
 
@@ -21,7 +14,7 @@ data "azurerm_subnet" "subnet" {
 
 resource "azurerm_public_ip" "public_ip" {
   count               = var.vmcount
-  name                = "${local.safe_server_type}-${local.safe_env}-PIP-${count.index + 1}"
+  name                = "PIP-${count.index + 1}"
   location            = azurerm_resource_group.RG.location
   resource_group_name = azurerm_resource_group.RG.name
   allocation_method   = "Dynamic"
@@ -31,12 +24,12 @@ resource "azurerm_public_ip" "public_ip" {
 
 resource "azurerm_network_interface" "NIC" {
   count               = var.vmcount
-  name                = "${local.safe_server_type}-${local.safe_env}-NIC-${count.index + 1}"
+  name                = "Web-NIC-${count.index + 1}"
   location            = azurerm_resource_group.RG.location
   resource_group_name = azurerm_resource_group.RG.name
 
   ip_configuration {
-    name                          = "${local.safe_server_type}-${local.safe_env}-IPConfig-${count.index + 1}"
+    name                          = "Pub-IPConfig-${count.index + 1}"
     subnet_id                     = data.azurerm_subnet.subnet.id
     private_ip_address_allocation = "Dynamic"
     public_ip_address_id          = azurerm_public_ip.public_ip[count.index].id
@@ -46,7 +39,7 @@ resource "azurerm_network_interface" "NIC" {
 
 resource "azurerm_virtual_machine" "main" {
   count                 = var.vmcount
-  name                  = "${local.safe_server_type}-${local.safe_env}-VM-${count.index + 1}"
+  name                  = "cia-dc-VM-${count.index + 1}"
   location              = azurerm_resource_group.RG.location
   resource_group_name   = azurerm_resource_group.RG.name
   network_interface_ids = [element(azurerm_network_interface.NIC.*.id, count.index)]
@@ -60,13 +53,13 @@ resource "azurerm_virtual_machine" "main" {
   }
 
   storage_os_disk {
-    name              = "${local.safe_server_type}-${local.safe_env}-VM-${count.index + 1}-OSDisk"
+    name              = "OS-VM-${count.index + 1}-OSDisk"
     caching           = "ReadWrite"
     create_option     = "FromImage"
     managed_disk_type = "Standard_LRS"
   }
   os_profile {
-    computer_name  = "${local.safe_server_type}-${local.safe_env}-VM-OSDisk-${count.index + 1}"
+    computer_name  = "cia-VM-OSDisk-${count.index + 1}"
     admin_username = var.username
     admin_password = var.password
   }
