@@ -1,5 +1,5 @@
 resource "azurerm_resource_group" "RG" {
-  name     = "web-RG-${count.index + 1}"
+  name     = "web-RG"
   location = var.location
 }
 
@@ -13,8 +13,7 @@ data "azurerm_subnet" "subnet" {
 # create the publicIp address
 
 resource "azurerm_public_ip" "public_ip" {
-  count               = var.vmcount
-  name                = "PIP-${count.index + 1}"
+  name                = "PIP-IP"
   location            = azurerm_resource_group.RG.location
   resource_group_name = azurerm_resource_group.RG.name
   allocation_method   = "Dynamic"
@@ -23,26 +22,24 @@ resource "azurerm_public_ip" "public_ip" {
 # create the NIC
 
 resource "azurerm_network_interface" "NIC" {
-  count               = var.vmcount
-  name                = "Web-NIC-${count.index + 1}"
+  name                = "Web-NIC"
   location            = azurerm_resource_group.RG.location
   resource_group_name = azurerm_resource_group.RG.name
 
   ip_configuration {
-    name                          = "Pub-IPConfig-${count.index + 1}"
+    name                          = "IPConfig"
     subnet_id                     = data.azurerm_subnet.subnet.id
     private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.public_ip[count.index].id
+    public_ip_address_id          = azurerm_public_ip.public_ip.id
   }
 }
 // create a new VM 
 
 resource "azurerm_virtual_machine" "main" {
-  count                 = var.vmcount
-  name                  = "cia-dc-VM-${count.index + 1}"
+  name                  = "cia-dc"
   location              = azurerm_resource_group.RG.location
   resource_group_name   = azurerm_resource_group.RG.name
-  network_interface_ids = [element(azurerm_network_interface.NIC.*.id, count.index)]
+  network_interface_ids = [azurerm_network_interface.NIC.id]
   vm_size               = var.size
 
   storage_image_reference {
@@ -53,13 +50,13 @@ resource "azurerm_virtual_machine" "main" {
   }
 
   storage_os_disk {
-    name              = "OS-VM-${count.index + 1}-OSDisk"
+    name              = "VM-OSDisk"
     caching           = "ReadWrite"
     create_option     = "FromImage"
     managed_disk_type = "Standard_LRS"
   }
   os_profile {
-    computer_name  = "cia-VM-OSDisk-${count.index + 1}"
+    computer_name  = "VM-OSDisk"
     admin_username = var.username
     admin_password = var.password
   }
@@ -75,7 +72,7 @@ resource "azurerm_virtual_machine" "main" {
 
 # resource "azurerm_managed_disk" "data_disk" {
 #   count                = var.vmcount
-#   name                 = "datadisk-${var.server_type}-${var.env}-${count.index + 1}"
+#   name                 = "datadisk-${var.server_type}-${var.env}"
 #   location             = azurerm_resource_group.RG.location
 #   resource_group_name  = azurerm_resource_group.RG.name
 #   storage_account_type = "Standard_LRS"
@@ -87,7 +84,7 @@ resource "azurerm_virtual_machine" "main" {
 
 # resource "azurerm_virtual_machine_extension" "nginx_ansible" {
 #   count                      = var.vmcount
-#   name                       = "nginx-ansible-${count.index + 1}"
+#   name                       = "nginx-ansible"
 #   virtual_machine_id         = element(azurerm_virtual_machine.main.*.id, count.index)
 #   publisher                  = "Microsoft.Azure.Extensions"
 #   type                       = "CustomScript"
